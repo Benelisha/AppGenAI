@@ -1,124 +1,149 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../../navigation/types';
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { useRoute, RouteProp } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
+import type { RootStackParamList } from "../../../navigation/types";
+import { PATHS } from "../../../constants/paths";
+import { createModuleSystem } from "../../../utils/createModuleSystem";
+import ProgramErrorDisplay from "../components/ProgramErrorDisplay";
 
-type ProgramScreenRouteProp = RouteProp<RootStackParamList, 'Program'>;
+type ProgramScreenRouteProp = RouteProp<RootStackParamList, "Program">;
 
 const ProgramScreen: React.FC = () => {
   const route = useRoute<ProgramScreenRouteProp>();
-  const { programId } = route.params;
+  const { programId } = route.params; // This is now the folder name
+  const [MiniApp, setMiniApp] = useState<React.ComponentType | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [directoryTree, setDirectoryTree] = useState<any[]>([]);
 
-  // Mock program data
-  const getProgramData = (id: string) => {
-    const programs = {
-      '1': {
-        title: 'Program Alpha',
-        description: 'Advanced training program for experienced users',
-        details: 'This program includes advanced techniques and methodologies...',
-        duration: '12 weeks',
-        level: 'Advanced',
-      },
-      '2': {
-        title: 'Program Beta',
-        description: 'Intermediate level program',
-        details: 'Perfect for users with some experience...',
-        duration: '8 weeks',
-        level: 'Intermediate',
-      },
-      '3': {
-        title: 'Program Gamma',
-        description: 'Beginner friendly program',
-        details: 'Great starting point for newcomers...',
-        duration: '6 weeks',
-        level: 'Beginner',
-      },
-    };
-    return programs[id as keyof typeof programs] || programs['1'];
+  useEffect(() => {
+    async function loadProgram() {
+      try {
+        const folderUri = PATHS.PROGRAMS + programId + '/';
+        
+        // Build directory tree
+        const tree = await buildDirectoryTree(folderUri, '');
+        setDirectoryTree(tree);
+
+        // Get only files for the module system
+        const fileContents: Record<string, string> = {};
+        await collectFiles(folderUri, '', fileContents);
+
+        const requireFunc = createModuleSystem(fileContents);
+        const AppComponent = requireFunc('index.js'); // Your app entry point
+
+        setMiniApp(() => AppComponent);
+      } catch (e) {
+        console.error(e);
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    }
+
+    loadProgram();
+  }, [programId]);
+
+  // Recursive function to build directory tree
+  const buildDirectoryTree = async (basePath: string, relativePath: string): Promise<any[]> => {
+    try {
+      const items = await FileSystem.readDirectoryAsync(basePath);
+      const tree = [];
+
+      for (const item of items) {
+        const fullPath = basePath + item;
+        const itemRelativePath = relativePath ? `${relativePath}/${item}` : item;
+        const fileInfo = await FileSystem.getInfoAsync(fullPath);
+
+        if (fileInfo.isDirectory) {
+          const children = await buildDirectoryTree(fullPath + '/', itemRelativePath);
+          tree.push({
+            name: item,
+            type: 'folder',
+            path: itemRelativePath,
+            children: children
+          });
+        } else {
+          tree.push({
+            name: item,
+            type: 'file',
+            path: itemRelativePath
+          });
+        }
+      }
+
+      return tree.sort((a, b) => {
+        // Folders first, then files, both alphabetically
+        if (a.type !== b.type) {
+          return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    } catch (error) {
+      return [];
+    }
   };
 
-  const program = getProgramData(programId);
+  // Recursive function to collect all files for the module system
+  const collectFiles = async (basePath: string, relativePath: string, fileContents: Record<string, string>) => {
+    try {
+      const items = await FileSystem.readDirectoryAsync(basePath);
+      
+      for (const item of items) {
+        const fullPath = basePath + item;
+        const itemRelativePath = relativePath ? `${relativePath}/${item}` : item;
+        const fileInfo = await FileSystem.getInfoAsync(fullPath);
+
+        if (fileInfo.isDirectory) {
+          await collectFiles(fullPath + '/', itemRelativePath, fileContents);
+        } else {
+          fileContents[itemRelativePath] = await FileSystem.readAsStringAsync(fullPath);
+        }
+      }
+    } catch (error) {
+      console.error('Error collecting files:', error);
+    }
+  };
+
+  if (error) {
+    return (
+      <ProgramErrorDisplay 
+        error={error}
+        programId={programId}
+        directoryTree={directoryTree}
+      />
+    );
+  }
+
+  if (!MiniApp) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading program...</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{program.title}</Text>
-        <View style={styles.infoContainer}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Level:</Text>
-            <Text style={styles.infoValue}>{program.level}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Duration:</Text>
-            <Text style={styles.infoValue}>{program.duration}</Text>
-          </View>
-        </View>
-        <Text style={styles.description}>{program.description}</Text>
-        <Text style={styles.detailsHeader}>Program Details</Text>
-        <Text style={styles.details}>{program.details}</Text>
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <MiniApp />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
-  content: {
-    padding: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-  },
-  infoContainer: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  infoLabel: {
+  loadingText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#333',
-  },
-  description: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  detailsHeader: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  details: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
+    color: "#666",
+    marginTop: 16,
   },
 });
 
