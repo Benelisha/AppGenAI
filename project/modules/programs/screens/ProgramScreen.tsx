@@ -34,6 +34,7 @@ const ProgramScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [backupFiles, setBackupFiles] = useState<any>(null);
   const [miniAppCode, setMiniAppCode] = useState<string | null>(null);
+  const [allFileContents, setAllFileContents] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     navigation.setOptions({
@@ -99,6 +100,9 @@ const ProgramScreen: React.FC = () => {
         programId
       );
 
+      // Store all files content for error display
+      setAllFileContents(fileContents);
+      
       // Store the index.js code for debugging
       setMiniAppCode(fileContents['index.js'] || 'index.js not found');
 
@@ -176,11 +180,19 @@ const ProgramScreen: React.FC = () => {
   };
 
   if (error) {
+    // Convert fileContents object to array of {path, content} objects
+    const jsFilesContent = Object.entries(allFileContents).map(([path, content]) => ({
+      path,
+      content
+    }));
+
     return (
       <ProgramErrorDisplay
         error={error}
         programId={programId}
         directoryTree={directoryTree}
+        jsFilesContent={jsFilesContent}
+        stacktrace={error.includes('SyntaxError') ? error : undefined}
       />
     );
   }
