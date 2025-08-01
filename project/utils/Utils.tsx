@@ -69,12 +69,12 @@ const FILES = {
             onPress: increment 
           })
         ),
-        React.createElement(View, { style: styles.buttonContainer },
-          React.createElement(Button, { 
-            title: "Test AsyncStorage", 
-            onPress: testAsyncStorage 
-          })
-        )
+        // React.createElement(View, { style: styles.buttonContainer },
+        //   React.createElement(Button, { 
+        //     title: "Test AsyncStorage", 
+        //     onPress: testAsyncStorage 
+        //   })
+        // )
       );
     };
 
