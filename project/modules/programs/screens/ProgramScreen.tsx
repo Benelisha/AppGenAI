@@ -9,7 +9,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../../../navigation/types";
 import { PATHS } from "../../../constants/paths";
-import { createModuleSystem } from "../../../utils/createModuleSystem";
+import { createModuleSystem } from "../../../utils/createModuleSystem.js";
 import ProgramErrorDisplay from "../components/ProgramErrorDisplay";
 import SafeAppWrapper from "../components/SafeAppWrapper";
 import GPTChatModal from "../components/GPTChatModal";

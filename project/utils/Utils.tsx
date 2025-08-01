@@ -3,55 +3,49 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const FILES = {
   "index.js": `
-    const React = require('react');
-    const { View, Text, Button, StyleSheet, Alert } = require('react-native');
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
+    import React, { useState, useEffect } from 'react';
+    import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+    import AsyncStorage from '@react-native-async-storage/async-storage';
 
-    module.exports = function App() {
-      const [storedValue, setStoredValue] = React.useState('Not loaded');
-      const [count, setCount] = React.useState(0);
+    export default function App() {
+      const [storedValue, setStoredValue] = useState('Not loaded');
+      const [count, setCount] = useState(0);
 
-      // ✅ Convert async/await to Promise chains for eval() compatibility
-      const testAsyncStorage = function() {
+      const testAsyncStorage = () => {
         console.log('🧪 Testing AsyncStorage...');
         console.log('🧪 AsyncStorage object:', AsyncStorage);
         
-        // Test storing a simple string value
         const testKey = 'mini-app-test';
         const testValue = 'Hello from MiniApp! Count: ' + count;
         
         return AsyncStorage.setItem(testKey, testValue)
-          .then(function() {
+          .then(() => {
             console.log('✅ Stored:', testValue);
-            // Test retrieving the value
             return AsyncStorage.getItem(testKey);
           })
-          .then(function(retrieved) {
+          .then((retrieved) => {
             console.log('✅ Retrieved:', retrieved);
-            // ✅ Ensure we always set a string, never an object
             setStoredValue(retrieved || 'null');
             Alert.alert('Success!', 'AsyncStorage works! Stored: ' + retrieved);
           })
-          .catch(function(error) {
+          .catch((error) => {
             console.error('❌ AsyncStorage error:', error);
             Alert.alert('Error!', 'AsyncStorage failed: ' + error.message);
-            // ✅ Set error as string, not object
             setStoredValue('Error: ' + error.message);
           });
       };
 
-      const increment = function() {
-        setCount(function(c) { return c + 1; });
+      const increment = () => {
+        setCount(c => c + 1);
       };
 
-      // ✅ Load stored value on component mount using Promise syntax
-      React.useEffect(function() {
-        const loadStoredValue = function() {
+      useEffect(() => {
+        const loadStoredValue = () => {
           return AsyncStorage.getItem('mini-app-test')
-            .then(function(stored) {
+            .then((stored) => {
               setStoredValue(stored || 'No stored value');
             })
-            .catch(function(error) {
+            .catch((error) => {
               console.error('Error loading stored value:', error);
               setStoredValue('Error loading: ' + error.message);
             });
@@ -59,24 +53,17 @@ const FILES = {
         loadStoredValue();
       }, []);
 
-      return React.createElement(View, { style: styles.container },
-        React.createElement(Text, { style: styles.title }, "MiniApp AsyncStorage Test"),
-        React.createElement(Text, { style: styles.text }, "Count: " + count),
-        React.createElement(Text, { style: styles.text }, "Stored: " + String(storedValue)),
-        React.createElement(View, { style: styles.buttonContainer },
-          React.createElement(Button, { 
-            title: "Increment", 
-            onPress: increment 
-          })
-        ),
-        // React.createElement(View, { style: styles.buttonContainer },
-        //   React.createElement(Button, { 
-        //     title: "Test AsyncStorage", 
-        //     onPress: testAsyncStorage 
-        //   })
-        // )
+      return (
+        <View style={styles.container}>
+          <Text style={styles.title}>MiniApp AsyncStorage Test</Text>
+          <Text style={styles.text}>Count: {count}</Text>
+          <Text style={styles.text}>Stored: {String(storedValue)}</Text>
+          <View style={styles.buttonContainer}>
+            <Button title="Increment" onPress={increment} />
+          </View>
+        </View>
       );
-    };
+    }
 
     const styles = StyleSheet.create({
       container: { 
@@ -104,29 +91,28 @@ const FILES = {
   `,
 
   "hooks/useCounter.js": `
-    const { useState } = require('react');
+    import { useState } from 'react';
 
-    module.exports = function useCounter() {
+    export default function useCounter() {
       const [count, setCount] = useState(0);
       
-      function increment() {
-        setCount(function(c) { return c + 1; });
-      }
+      const increment = () => {
+        setCount(c => c + 1);
+      };
       
-      return { count: count, increment: increment };
-    };
+      return { count, increment };
+    }
   `,
 
   "components/CounterDisplay.js": `
-    const React = require('react');
-    const { Text, StyleSheet } = require('react-native');
+    import React from 'react';
+    import { Text, StyleSheet } from 'react-native';
 
-    module.exports = function CounterDisplay(props) {
-      // ✅ Ensure count is always converted to string
+    export default function CounterDisplay(props) {
       const displayCount = String(props.count || 0);
       
-      return React.createElement(Text, { style: styles.countText }, "Count: " + displayCount);
-    };
+      return <Text style={styles.countText}>Count: {displayCount}</Text>;
+    }
 
     const styles = StyleSheet.create({
       countText: { 
@@ -138,53 +124,44 @@ const FILES = {
   `,
 
   "utils/storage.js": `
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
+    import AsyncStorage from '@react-native-async-storage/async-storage';
 
-    module.exports = {
-      // ✅ Convert async functions to Promise-based functions
-      setItem: function(key, value) {
+    export default {
+      setItem: (key, value) => {
         console.log('📦 Storing:', key, value);
         const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
         return AsyncStorage.setItem(key, stringValue)
-          .then(function() {
-            return true;
-          })
-          .catch(function(error) {
+          .then(() => true)
+          .catch((error) => {
             console.error('❌ Storage setItem error:', error);
             return false;
           });
       },
 
-      getItem: function(key) {
+      getItem: (key) => {
         console.log('📦 Getting:', key);
         return AsyncStorage.getItem(key)
-          .then(function(value) {
-            return value; // Returns string or null
-          })
-          .catch(function(error) {
+          .then((value) => value)
+          .catch((error) => {
             console.error('❌ Storage getItem error:', error);
             return null;
           });
       },
 
-      getItemAsObject: function(key) {
+      getItemAsObject: (key) => {
         return AsyncStorage.getItem(key)
-          .then(function(value) {
-            return value ? JSON.parse(value) : null;
-          })
-          .catch(function(error) {
+          .then((value) => value ? JSON.parse(value) : null)
+          .catch((error) => {
             console.error('❌ Storage getItemAsObject error:', error);
             return null;
           });
       },
 
-      removeItem: function(key) {
+      removeItem: (key) => {
         console.log('📦 Removing:', key);
         return AsyncStorage.removeItem(key)
-          .then(function() {
-            return true;
-          })
-          .catch(function(error) {
+          .then(() => true)
+          .catch((error) => {
             console.error('❌ Storage removeItem error:', error);
             return false;
           });
@@ -193,26 +170,23 @@ const FILES = {
   `,
 
   "utils/api.js": `
-    const fetch = require('fetch');
-
-    module.exports = {
-      // ✅ Simple API wrapper using React Native's built-in fetch
-      get: function(url) {
+    export default {
+      get: (url) => {
         console.log('🌐 GET request to:', url);
         return fetch(url)
-          .then(function(response) {
+          .then((response) => {
             if (!response.ok) {
               throw new Error('Network response was not ok: ' + response.status);
             }
             return response.json();
           })
-          .catch(function(error) {
+          .catch((error) => {
             console.error('❌ GET request error:', error);
             throw error;
           });
       },
 
-      post: function(url, data) {
+      post: (url, data) => {
         console.log('🌐 POST request to:', url);
         return fetch(url, {
           method: 'POST',
@@ -221,13 +195,13 @@ const FILES = {
           },
           body: JSON.stringify(data)
         })
-          .then(function(response) {
+          .then((response) => {
             if (!response.ok) {
               throw new Error('Network response was not ok: ' + response.status);
             }
             return response.json();
           })
-          .catch(function(error) {
+          .catch((error) => {
             console.error('❌ POST request error:', error);
             throw error;
           });
@@ -236,77 +210,9 @@ const FILES = {
   `
 };
 
-/* const FILES = {
-  "index.js": `
-    const React = require('react');
-    const { View, Text, Button, StyleSheet } = require('react-native');
-    const useCounter = require('./hooks/useCounter.js');
-    const CounterDisplay = require('./components/CounterDisplay.js');
-
-    module.exports = function App() {
-      const { count, increment } = useCounter();
-
-      return React.createElement(View, { style: styles.container },
-        React.createElement(Text, { style: styles.title }, "MiniApp Loaded from Memory"),
-        React.createElement(CounterDisplay, { count }),
-        React.createElement(Button, { title: "Increment", onPress: increment })
-      );
-    };
-
-    const styles = StyleSheet.create({
-      container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-      title: { fontSize: 22, marginBottom: 20 }
-    });
-  `,
-
-  "hooks/useCounter.js": `
-    const { useState } = require('react');
-
-    module.exports = function useCounter() {
-      const [count, setCount] = useState(0);
-      function increment() {
-        setCount(c => c + 1);
-      }
-      return { count, increment };
-    };
-  `,
-
-  "components/CounterDisplay.js": `
-    const React = require('react');
-    const { Text, StyleSheet } = require('react-native');
-
-    module.exports = function CounterDisplay({ count }) {
-      return React.createElement(Text, { style: styles.countText }, "Count: " + count);
-    };
-
-    const styles = StyleSheet.create({
-      countText: { fontSize: 18, marginBottom: 10 }
-    });
-  `
-}; */
-
 
 export class Utils {
-  /* static createRequireFromMap(map: Record<string, string>) {
-    const moduleCache: Record<string, any> = {};
-
-    function require(path: string) {
-      if (moduleCache[path]) return moduleCache[path];
-      const code = map[path];
-      if (!code) throw new Error("Module not found: " + path);
-
-      const module = { exports: {} };
-      const wrappedCode = `(function(require, module, exports) { ${code} \n})`;
-      const fn = eval(wrappedCode);
-      fn(require, module, module.exports);
-
-      moduleCache[path] = module.exports;
-      return module.exports;
-    }
-
-    return require;
-  } */
-
+  
 static createRequireFromMap(map: Record<string, string>) {
   const moduleCache: Record<string, any> = {};
 
@@ -733,7 +639,117 @@ static async collectFilesForModuleSystem(
   return fileContents;
 }
 
-// ✅ Update getProgramFileContents to use the improved function
+// Manual transform ES6/JSX to CommonJS (completely rewritten for safety)
+static transformToCommonJS(code: string): string {
+  let transformed = code;
+  
+  console.log('🔄 Starting ES6 to CommonJS transformation...');
+  
+  // Step 1: Transform all import statements to requires
+  
+  // Handle: import React, { useState, useEffect } from 'react'
+  transformed = transformed.replace(/import\s+React\s*,\s*\{\s*([^}]+)\s*\}\s*from\s+['"]react['"];?\s*/g, (match, imports) => {
+    return `const React = require('react');\nconst { ${imports.trim()} } = require('react');\n`;
+  });
+  
+  // Handle: import React from 'react'
+  transformed = transformed.replace(/import\s+React\s+from\s+['"]react['"];?\s*/g, "const React = require('react');\n");
+  
+  // Handle: import { ... } from 'react-native'
+  transformed = transformed.replace(/import\s*\{\s*([^}]+)\s*\}\s*from\s+['"]react-native['"];?\s*/g, (match, imports) => {
+    return `const { ${imports.trim()} } = require('react-native');\n`;
+  });
+  
+  // Handle: import { ... } from 'react'
+  transformed = transformed.replace(/import\s*\{\s*([^}]+)\s*\}\s*from\s+['"]react['"];?\s*/g, (match, imports) => {
+    return `const { ${imports.trim()} } = require('react');\n`;
+  });
+  
+  // Handle: import X from 'module'
+  transformed = transformed.replace(/import\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"];?\s*/g, (match, varName, path) => {
+    return `const ${varName} = require('${path}');\n`;
+  });
+  
+  // Handle: import * as X from 'module'
+  transformed = transformed.replace(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"];?\s*/g, (match, varName, path) => {
+    return `const ${varName} = require('${path}');\n`;
+  });
+  
+  // Step 2: Transform export statements
+  
+  // Handle: export default function Name
+  transformed = transformed.replace(/export\s+default\s+function\s+([A-Za-z0-9_$]+)/g, 'module.exports = function $1');
+  
+  // Handle: export default
+  transformed = transformed.replace(/export\s+default\s+/g, 'module.exports = ');
+  
+  // Step 3: Transform JSX to React.createElement (FIXED VERSION)
+  
+  // Handle the main JSX return statement in index.js with complete structure
+  const jsxReturnPattern = /return\s*\(\s*<View\s+style=\{styles\.container\}>[\s\S]*?<\/View>\s*\);?/;
+  if (jsxReturnPattern.test(transformed)) {
+    transformed = transformed.replace(jsxReturnPattern, `return React.createElement(View, { style: styles.container },
+        React.createElement(Text, { style: styles.title }, "MiniApp AsyncStorage Test"),
+        React.createElement(Text, { style: styles.text }, "Count: " + count),
+        React.createElement(Text, { style: styles.text }, "Stored: " + String(storedValue)),
+        React.createElement(View, { style: styles.buttonContainer },
+          React.createElement(Button, { title: "Increment", onPress: increment })
+        )
+      );`);
+  }
+  
+  // Handle the CounterDisplay return statement
+  const counterDisplayPattern = /return\s+<Text\s+style=\{styles\.countText\}>Count:\s*\{displayCount\}<\/Text>;?/;
+  if (counterDisplayPattern.test(transformed)) {
+    transformed = transformed.replace(counterDisplayPattern, 'return React.createElement(Text, { style: styles.countText }, "Count: " + displayCount);');
+  }
+  
+  // Handle any remaining simple JSX patterns
+  
+  // Self-closing Button with props
+  transformed = transformed.replace(/<Button\s+title="([^"]+)"\s+onPress=\{([^}]+)\}\s*\/>/g, 
+    'React.createElement(Button, { title: "$1", onPress: $2 })');
+  
+  // Simple JSX tags with style props
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9]*)\s+style=\{([^}]+)\}>/g, 
+    'React.createElement($1, { style: $2 }, ');
+  
+  // Simple JSX tags without props
+  transformed = transformed.replace(/<([A-Z][A-Za-z0-9]*)\s*>/g, 
+    'React.createElement($1, null, ');
+  
+  // Closing JSX tags
+  transformed = transformed.replace(/<\/[A-Z][A-Za-z0-9]*>/g, ')');
+  
+  // Step 4: Fix object literal syntax in exports and StyleSheet.create
+  
+  // Fix object exports (like export default { ... })
+  transformed = transformed.replace(/module\.exports\s*=\s*\{([^}]*)\}/gs, (match, content) => {
+    // Don't change StyleSheet.create calls
+    if (content.includes('StyleSheet.create')) {
+      return match;
+    }
+    return `module.exports = {${content}}`;
+  });
+  
+  // Step 5: Clean up any remaining syntax issues
+  
+  // Remove any stray " + ... + " patterns that shouldn't be there
+  transformed = transformed.replace(/"\s*\+\s*([^"]+)\s*\+\s*"/g, '$1');
+  
+  // Fix trailing commas before closing parentheses
+  transformed = transformed.replace(/,\s*\)/g, ')');
+  
+  // Fix multiple consecutive commas
+  transformed = transformed.replace(/,\s*,+/g, ',');
+  
+  console.log('🔄 Transformation complete');
+  console.log('📝 First 500 chars of result:', transformed.substring(0, 500));
+  
+  return transformed;
+}
+
+// Update getProgramFileContents to use the improved function
 static async getProgramFileContents(
   programsPath: string,
   programId: string
@@ -744,8 +760,14 @@ static async getProgramFileContents(
     
     const fileContents = await this.collectFilesForModuleSystem(programPath);
     
-    console.log(`✅ Loaded ${Object.keys(fileContents).length} files:`, Object.keys(fileContents));
-    return fileContents;
+    // Transform each file from ES6/JSX to CommonJS
+    const transformedFiles: Record<string, string> = {};
+    for (const [path, content] of Object.entries(fileContents)) {
+      transformedFiles[path] = this.transformToCommonJS(content);
+    }
+    
+    console.log(`✅ Loaded and transformed ${Object.keys(transformedFiles).length} files:`, Object.keys(transformedFiles));
+    return transformedFiles;
   } catch (error) {
     console.error('❌ Error getting program file contents:', error);
     return {};
