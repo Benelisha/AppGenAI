@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { RootNavigator } from "./project/navigation/RootNavigator";
 
 import '@react-native-async-storage/async-storage';
+import 'react-native-reanimated';
 
 
 

@@ -190,6 +190,49 @@ const FILES = {
           });
       }
     };
+  `,
+
+  "utils/api.js": `
+    const fetch = require('fetch');
+
+    module.exports = {
+      // ✅ Simple API wrapper using React Native's built-in fetch
+      get: function(url) {
+        console.log('🌐 GET request to:', url);
+        return fetch(url)
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error('Network response was not ok: ' + response.status);
+            }
+            return response.json();
+          })
+          .catch(function(error) {
+            console.error('❌ GET request error:', error);
+            throw error;
+          });
+      },
+
+      post: function(url, data) {
+        console.log('🌐 POST request to:', url);
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        })
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error('Network response was not ok: ' + response.status);
+            }
+            return response.json();
+          })
+          .catch(function(error) {
+            console.error('❌ POST request error:', error);
+            throw error;
+          });
+      }
+    };
   `
 };
 
@@ -558,6 +601,65 @@ static createRequireFromMap(map: Record<string, string>) {
 
   // Add this improved function to Utils class
 
+// static async collectFilesForModuleSystem(
+//   basePath: string,
+//   relativePath: string = '',
+//   fileContents: Record<string, string> = {}
+// ): Promise<Record<string, string>> {
+//   try {
+//     const fullPath = basePath + relativePath;
+    
+//     // ✅ Check if path exists and is accessible
+//     const pathInfo = await FileSystem.getInfoAsync(fullPath);
+//     if (!pathInfo.exists) {
+//       console.log(`⚠️ Path does not exist: ${fullPath}`);
+//       return fileContents;
+//     }
+
+//     if (pathInfo.isDirectory) {
+//       // ✅ Read directory contents
+//       const items = await FileSystem.readDirectoryAsync(fullPath);
+      
+//       for (const item of items) {
+//         const itemPath = relativePath ? `${relativePath}/${item}` : item;
+//         const itemFullPath = fullPath + '/' + item;
+        
+//         // ✅ Check each item type before processing
+//         const itemInfo = await FileSystem.getInfoAsync(itemFullPath);
+        
+//         if (itemInfo.isDirectory) {
+//           // ✅ Recursively process subdirectories
+//           await this.collectFilesForModuleSystem(basePath, itemPath, fileContents);
+//         } else {
+//           // ✅ Only read files, not directories
+//           try {
+//             const content = await FileSystem.readAsStringAsync(itemFullPath);
+//             fileContents[itemPath] = content;
+//             console.log(`✅ Read file: ${itemPath} (${content.length} chars)`);
+//           } catch (readError) {
+//             console.error(`❌ Error reading file ${itemPath}:`, readError);
+//           }
+//         }
+//       }
+//     } else {
+//       // ✅ Single file
+//       try {
+//         const content = await FileSystem.readAsStringAsync(fullPath);
+//         const fileName = relativePath || fullPath.split('/').pop() || 'unknown';
+//         fileContents[fileName] = content;
+//         console.log(`✅ Read single file: ${fileName} (${content.length} chars)`);
+//       } catch (readError) {
+//         console.error(`❌ Error reading single file ${fullPath}:`, readError);
+//       }
+//     }
+//   } catch (error) {
+//     console.error(`❌ Error in collectFilesForModuleSystem for ${basePath}${relativePath}:`, error);
+//   }
+
+//   return fileContents;
+// }
+
+// Update the collectFilesForModuleSystem function
 static async collectFilesForModuleSystem(
   basePath: string,
   relativePath: string = '',
@@ -566,7 +668,7 @@ static async collectFilesForModuleSystem(
   try {
     const fullPath = basePath + relativePath;
     
-    // ✅ Check if path exists and is accessible
+    // ✅ Check if path exists and get info
     const pathInfo = await FileSystem.getInfoAsync(fullPath);
     if (!pathInfo.exists) {
       console.log(`⚠️ Path does not exist: ${fullPath}`);
@@ -574,29 +676,44 @@ static async collectFilesForModuleSystem(
     }
 
     if (pathInfo.isDirectory) {
-      // ✅ Read directory contents
-      const items = await FileSystem.readDirectoryAsync(fullPath);
-      
-      for (const item of items) {
-        const itemPath = relativePath ? `${relativePath}/${item}` : item;
-        const itemFullPath = fullPath + '/' + item;
+      // ✅ Read directory contents safely
+      try {
+        const items = await FileSystem.readDirectoryAsync(fullPath);
         
-        // ✅ Check each item type before processing
-        const itemInfo = await FileSystem.getInfoAsync(itemFullPath);
-        
-        if (itemInfo.isDirectory) {
-          // ✅ Recursively process subdirectories
-          await this.collectFilesForModuleSystem(basePath, itemPath, fileContents);
-        } else {
-          // ✅ Only read files, not directories
+        for (const item of items) {
+          // ✅ Skip hidden files and system files
+          if (item.startsWith('.') || item === '__pycache__' || item === 'node_modules') {
+            continue;
+          }
+
+          const itemPath = relativePath ? `${relativePath}/${item}` : item;
+          const itemFullPath = fullPath + '/' + item;
+          
+          // ✅ Check each item type before processing
           try {
-            const content = await FileSystem.readAsStringAsync(itemFullPath);
-            fileContents[itemPath] = content;
-            console.log(`✅ Read file: ${itemPath} (${content.length} chars)`);
-          } catch (readError) {
-            console.error(`❌ Error reading file ${itemPath}:`, readError);
+            const itemInfo = await FileSystem.getInfoAsync(itemFullPath);
+            
+            if (itemInfo.exists && itemInfo.isDirectory) {
+              // ✅ Recursively process subdirectories
+              await this.collectFilesForModuleSystem(basePath, itemPath, fileContents);
+            } else if (itemInfo.exists && !itemInfo.isDirectory) {
+              // ✅ Only read actual files, check if it's a text file
+              if (item.endsWith('.js') || item.endsWith('.json') || item.endsWith('.txt')) {
+                try {
+                  const content = await FileSystem.readAsStringAsync(itemFullPath);
+                  fileContents[itemPath] = content;
+                  console.log(`✅ Read file: ${itemPath} (${content.length} chars)`);
+                } catch (readError) {
+                  console.error(`❌ Error reading file ${itemPath}:`, readError);
+                }
+              }
+            }
+          } catch (itemError) {
+            console.error(`❌ Error checking item ${itemFullPath}:`, itemError);
           }
         }
+      } catch (dirError) {
+        console.error(`❌ Error reading directory ${fullPath}:`, dirError);
       }
     } else {
       // ✅ Single file
