@@ -108,7 +108,7 @@ const ProgramErrorDisplay: React.FC<ProgramErrorDisplayProps> = ({
       <Text style={styles.sectionHeader}>=== MINI APP ERROR LOG ===</Text>
       <View style={styles.logSection}>
         <Text style={styles.logText}>Program ID: {programId}</Text>
-        <Text style={styles.logText}>Error: Failed to load mini-app: {error}</Text>
+        <Text style={[styles.logText, styles.errorLogText]}>Error: Failed to load mini-app: {error}</Text>
         <Text style={styles.logText}>Error Source: Mini-app loading</Text>
       </View>
 
@@ -259,6 +259,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.5,
     fontFamily: "monospace",
+  },
+  errorLogText: {
+    color: '#d32f2f',  // Same red color as stacktrace
   },
 });
 
