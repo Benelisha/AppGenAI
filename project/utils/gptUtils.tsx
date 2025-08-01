@@ -2,8 +2,7 @@ import OpenAI from "openai";
 import { GPTMessage } from "./types";
 
 const openai = new OpenAI({
-  apiKey:
-    "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",
+  apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || "",
   dangerouslyAllowBrowser: true,
 });
 
